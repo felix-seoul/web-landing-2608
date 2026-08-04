@@ -307,8 +307,21 @@ h2 {
 .earn-foot em { font-style: normal; color: var(--gold); font-size: 11.5px; margin-left: auto; }
 
 /* CTA */
+/* 마지막 샷에서는 건물이 화면 한가운데 정면으로 서고, 그 발치의 잔디·아스팔트
+   베이스판이 화면 아래쪽을 밝게 채운다. 면책 문구는 하필 그 위에 앉는다.
+   그래서 카피 뒤 스크림을 아래로 길게 늘여 문구가 앉을 바닥을 만들어 준다.
+   (레이아웃은 그대로 두고 대비만 확보 — 버튼과 시선이 갈리지 않게)
+   맨 아래를 다시 투명으로 되돌리는 건 blur(14px) 가 잘린 끝을 띠로 만들기 때문. */
 .copy.cta::before {
-  background: radial-gradient(ellipse at center, rgba(8, 14, 24, 0.5), rgba(8, 14, 24, 0.3) 46%, rgba(8, 14, 24, 0.1) 72%, transparent 88%);
+  inset: -76px -120px -132px;
+  background:
+    linear-gradient(to bottom,
+      rgba(4, 7, 14, 0) 0 44%,
+      rgba(4, 7, 14, 0.5) 62%,
+      rgba(4, 7, 14, 0.74) 74%,
+      rgba(4, 7, 14, 0.74) 88%,
+      rgba(4, 7, 14, 0) 100%),
+    radial-gradient(ellipse at center, rgba(8, 14, 24, 0.5), rgba(8, 14, 24, 0.3) 46%, rgba(8, 14, 24, 0.1) 72%, transparent 88%);
 }
 .copy.cta h2, .copy.cta .body { text-shadow: 0 2px 4px rgba(3, 6, 14, 0.7), 0 0 22px rgba(3, 6, 14, 0.8); }
 .copy.cta .body { color: #e2eaf6; }

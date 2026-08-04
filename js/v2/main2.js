@@ -150,6 +150,22 @@ const K_TY = [[0, 152], [1, 85], [1.5, 115], [2, 140], [2.5, 168], [3, 150], [3.
 const K_TX = [[0, 0], [1, -40], [1.5, 0], [2, 18], [2.5, 6], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0]];
 const K_FOV = [[0, 38], [1, 45], [2, 43], [3, 42], [3.55, 44], [4, 43], [5, 42], [6, 42], [7, 43], [8, 42]];
 
+// 가로 화면의 좌우 분할 — 모바일이 '위 = 건물 / 아래 = 글'로 나누는 것과 같은 원리다.
+// 카피가 왼쪽 레인이면 건물을 오른쪽으로, 오른쪽 레인이면 왼쪽으로 민다.
+// 값 = 건물이 갈 방향(+1 오른쪽 / -1 왼쪽). 서막(00)과 CTA(07)는 카피가 가운데라 0.
+// 03·06 만 원래도 안 겹쳤는데, 그건 그 구간의 방위각이 마침 건물을 반대편에
+// 세워 준 덕이었다. 그 우연을 전 챕터에 규칙으로 깔아 준다.
+// 이웃한 두 챕터는 반드시 다른 레인이어야 한다 — 교차 페이드 잔상이 겹쳐 읽히므로.
+// (01·02 만 예외이고, 그건 FADE[1] 을 앞당겨 끊어서 막았다)
+const LANE = [0, 1, 1, -1, 1, -1, 1, 0, 0];
+const SPLIT_F = 0.15;    // 화면 폭 대비 미는 양
+function laneAt(t) {
+  const i = clamp(Math.floor(t), 0, 7);
+  // 카피가 교차 페이드하는 구간(l 0.86→1.02)에 맞춰 레인을 바꾼다 —
+  // 글이 반대편으로 건너가는 그 순간에 건물도 같이 건너가야 한 동작으로 읽힌다.
+  return lerp(LANE[i], LANE[i + 1], smoothstep(0.80, 1.0, sat(t - i)));
+}
+
 // ---------------------------------------------------------------- 스크롤 → 타임라인
 const sections = [...document.querySelectorAll('section.ch')];
 let secTop = [], secLen = [];
@@ -265,7 +281,10 @@ const headLines = copies.map((el) => {
 // 3분의 2가 글 자리라 그 순간이 통째로 검은 판으로 보인다.
 const FADE = [
   [-1, 0.0001, 0.86, 1.02],   // 00 서막 — 처음부터 떠 있다
-  [-0.14, 0.02, 0.86, 1.02],
+  // 01 은 02 와 같은 왼쪽 레인이라(LANE 참고) 잔상이 다음 카피 위에 그대로 얹힌다.
+  // 나가는 구간만 앞당겨 끊는다 — 02 는 이미 l=-0.14(T 1.86)부터 올라오고 있어서
+  // 01 이 0 이 되는 T 1.96 시점엔 62% 까지 차 있다. 빈 순간은 생기지 않는다.
+  [-0.14, 0.02, 0.80, 0.96],
   [-0.14, 0.02, 0.86, 1.02],
   [-0.14, 0.02, 0.86, 1.02],
   [-0.14, 0.02, 0.86, 1.02],
@@ -480,8 +499,10 @@ function director(t, dt) {
     camera.lookAt(tmpB);
     camera.updateMatrixWorld();
   };
-  const setOffY = (oy) => {
-    if (Math.abs(oy) > 0.5) camera.setViewOffset(innerWidth, innerHeight, 0, oy, innerWidth, innerHeight);
+  // setViewOffset 은 '전체 화면 중 어느 창을 렌더할지'를 정한다.
+  // x/y 를 키우면 창이 오른쪽·아래로 가므로, 화면 위의 내용물은 왼쪽·위로 밀린다.
+  const setOff = (ox, oy) => {
+    if (Math.abs(ox) > 0.5 || Math.abs(oy) > 0.5) camera.setViewOffset(innerWidth, innerHeight, ox, oy, innerWidth, innerHeight);
     else camera.clearViewOffset();
   };
 
@@ -511,7 +532,7 @@ function director(t, dt) {
 
   // 건물이 화면 좌우로 잘리지 않는 최소 거리를 실제 투영으로 역산한다.
   // (예전의 '반폭 ÷ tan' 근사는 앞면이 카메라에 더 가깝다는 걸 못 봐서 잘렸다)
-  setOffY(offY);
+  setOff(0, offY);
   const pad = innerWidth * (portrait ? 0.05 : 0.004);
   place(dist);
   for (let i = 0; i < 4; i++) {
@@ -534,6 +555,22 @@ function director(t, dt) {
     camera.lookAt(tmpB);
     camera.updateMatrixWorld();
   }
+
+  // ── 좌우 분할 ─────────────────────────────────────────────
+  // 거리 역산이 다 끝난 뒤에 화면만 옆으로 민다. 거리를 건드리지 않으므로
+  // 건물이 작아지지 않고, 잘림 방지 루프와 서로 밀고 당기지도 않는다.
+  // 서막(lane 0)에는 걸리지 않으니 실사 사진 정합도 그대로다.
+  let offX = 0;
+  const lane = portrait ? 0 : laneAt(T);
+  if (Math.abs(lane) > 0.002) {
+    const r = projectMassFront();
+    const want = lane * innerWidth * SPLIT_F;
+    const edge = innerWidth * 0.03;
+    // 미는 쪽으로 건물이 화면 밖까지 나가지는 않을 만큼만 민다
+    const room = want > 0 ? (innerWidth - edge) - r.x1 : r.x0 - edge;
+    offX = Math.sign(want) * Math.min(Math.abs(want), Math.max(room, 0));
+  }
+  setOff(-offX, offY);
 
   // 카메라가 확정된 뒤에 사진을 그 위에 겹친다 (한 프레임도 어긋나지 않게)
   if (photoLive) fitHeroPhoto();
@@ -566,7 +603,13 @@ function director(t, dt) {
   if (state.tokScale > 0.001) {
     const f = tmpA.set(0, 0, -1).applyQuaternion(camera.quaternion);
     const r = tmpC.set(1, 0, 0).applyQuaternion(camera.quaternion);
-    tmpD.copy(camera.position).addScaledVector(f, 300).addScaledVector(r, MOBILE ? 0 : -90);
+    // 토큰도 빈 레인에 선다. 03(카피 우측)에서는 왼쪽에 떠 있다가
+    // 04(카피 좌측)로 넘어갈 때 카피와 엇갈려 오른쪽으로 건너간다.
+    // 한쪽에 고정해 두면 04 헤드라인 "66,900원부터" 위에 그대로 얹힌다.
+    // 폭이 작은 건 좌우 분할이 이미 화면을 크게 밀어 주기 때문 —
+    // 토큰은 카메라에서 300 밖에 안 떨어져 있어서 1 이 화면에서는 4px 쯤 된다.
+    const tokLane = lerp(-1, 1, smoothstep(3.86, 4.14, T));
+    tmpD.copy(camera.position).addScaledVector(f, 300).addScaledVector(r, MOBILE ? 0 : tokLane * 44);
     tmpD.y += MOBILE ? 16 : 6;
     state.tokPos.copy(tmpD);
   }
@@ -668,6 +711,9 @@ window.__probe = () => {
     // 건물 정면 실루엣이 화면에서 차지하는 비율 — 실사/브릭 정합과 잘림 확인용
     bx: [+(r.x0 / innerWidth).toFixed(3), +(r.x1 / innerWidth).toFixed(3)],
     by: [+(r.y0 / innerHeight).toFixed(3), +(r.y1 / innerHeight).toFixed(3)],
+    // 좌우/상하 분할 상태 — lane 부호와 bx 가 반대로 움직이면 분할이 뒤집힌 것이다
+    lane: +laneAt(T).toFixed(2),
+    off: camera.view && camera.view.enabled ? [Math.round(camera.view.offsetX), Math.round(camera.view.offsetY)] : null,
   };
 };
 frame();
