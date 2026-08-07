@@ -206,7 +206,6 @@ railLinks.forEach((lnk, i) => lnk.addEventListener('click', (e) => {
 }));
 const counters = {};
 document.querySelectorAll('[data-c]').forEach((el) => (counters[el.dataset.c] = el));
-const stageBadge = document.getElementById('stageBadge');
 
 // 서막 실사 사진 — assets/hero.jpg 가 있으면 사용, 없으면 바로 브릭 씬으로 시작
 const PHOTO_SRC = 'assets/hero.jpg';
@@ -394,14 +393,6 @@ function uiUpdate() {
     p.el.style.opacity = o.toFixed(3);
     p.el.style.transform = `translateY(${((1 - Math.min(o * 1.4, 1)) * 26).toFixed(1)}px)`;
     p.el.style.visibility = o < 0.005 ? 'hidden' : 'visible';
-  }
-  if (stageBadge) {
-    const on = T > 1.02 && T < 2.02;
-    stageBadge.style.opacity = on ? '1' : '0';
-    if (on) {
-      const bag = clamp(Math.floor(state.prog * 3) + 1, 1, 3);
-      stageBadge.textContent = `LAYER ${String(bag).padStart(2, '0')} / 03`;
-    }
   }
 }
 
