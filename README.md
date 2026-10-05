@@ -39,7 +39,6 @@ js/tower.js             fx.js 가 가져다 쓰는 v1 유틸 (v2 화면에는 �
 assets/                 hero.jpg(서막 실사) · Pretendard 폰트
 vendor/three/           three.js r0.185
 tools/build-single.mjs  단일 HTML 번들 빌더 → dist/weblock-landing.html
-classic.html            v1(555m 타워) 페이지 — 보관용. js/main.js · js/world.js 는 이 페이지 전용
 ```
 
 ## 타임라인 (스크롤 → T 0‥8)
