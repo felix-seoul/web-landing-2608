@@ -39,19 +39,20 @@ export function buildGrid() {
   g.fill(1, 3, 20, 23, 0, 0, MAT.GREEN);
 
   // 1층 실내 볼륨 (좌측): 크림 벽 + 전면 통유리
-  g.shell(3, 16, 3, 20, 1, 5, MAT.STONE);
-  g.fill(3, 16, 20, 20, 1, 5, MAT.GLASS);      // 전면 전체 유리
-  g.fill(3, 3, 6, 17, 1, 5, MAT.GLASS);        // 좌측면 유리 슬릿
+  // 좌측 벽은 위 캔틸레버 슬래브 밑까지 바짝 끌어낸다 (사진의 1층 좌측 흰 벽 위치)
+  g.shell(1, 16, 3, 20, 1, 5, MAT.STONE);
+  g.fill(1, 16, 20, 20, 1, 5, MAT.GLASS);      // 전면 전체 유리
+  g.fill(1, 1, 6, 17, 1, 5, MAT.GLASS);        // 좌측면 유리 슬릿
   g.fill(8, 12, 20, 20, 1, 1, MAT.DARK);       // 출입구 프레임 하단
   g.fill(9, 11, 20, 20, 2, 4, MAT.GLASS);      // 자동문
   // 유리 사이 검은 멀리언
-  for (let x = 5; x <= 15; x += 3) g.fill(x, x, 20, 20, 1, 5, MAT.DARK);
+  for (let x = 2; x <= 15; x += 3) g.fill(x, x, 20, 20, 1, 5, MAT.DARK);
 
   // 1층 우측: 필로티 (드라이브스루) — 사진처럼 '흰 원형 기둥'
-  const cols = [[20, 5], [20, 18], [26, 5], [26, 18], [31, 11]];
+  const cols = [[20, 5], [20, 18], [26, 5], [26, 18], [31, 11], [32, 18]];
   cols.forEach(([cx, cz]) => g.fill(cx, cx + 1, cz, cz + 1, 1, 5, MAT.WHITE));
   g.fill(17, 19, 3, 4, 1, 5, MAT.DARK);        // 코어 벽
-  g.fill(20, 31, 3, 19, 1, 1, MAT.ASPHALT);    // 필로티 바닥
+  g.fill(20, 33, 3, 19, 1, 1, MAT.ASPHALT);    // 필로티 바닥
 
   // 1층 실내 가구 — 유리 너머로 비친다
   for (let i = 0; i < 4; i++) {
@@ -65,23 +66,25 @@ export function buildGrid() {
   g.fill(16, 19, 17, 21, 1, 19, MAT.WOOD);
 
   // ── [봉지 2] 2층 ────────────────────────────────────
-  // 캔틸레버 슬래브 — 앞·좌로 내밀어 1층에 그늘을 드리운다
-  g.fill(0, 32, 1, 22, 6, 6, MAT.WHITE);
+  // 캔틸레버 슬래브 — 앞·좌로 내밀어 1층에 그늘을 드리운다.
+  // 폭은 서막 실사 사진에서 잰 값이다: 좌측 끝은 2층 유리보다 2칸, 우측은 1칸 더 나간다.
+  // (예전 0..32 는 사진보다 화면에서 74px 좁아, 보라 스윕이 지나갈 때 건물이 줄어드는 게 보였다)
+  g.fill(-2, 34, 1, 22, 6, 6, MAT.WHITE);
   // 전면 통유리 (좌우 끝단 벽만 크림)
-  g.fill(2, 31, 21, 21, 7, 12, MAT.GLASS);
-  g.fill(2, 3, 2, 21, 7, 12, MAT.STONE);       // 좌측 측벽
-  g.fill(31, 31, 3, 20, 7, 12, MAT.GLASS);     // 우측 측면 통유리
-  g.fill(31, 31, 3, 20, 7, 7, MAT.DARK);
-  g.fill(31, 31, 3, 20, 12, 12, MAT.DARK);
-  for (let z = 5; z <= 19; z += 3) g.fill(31, 31, z, z, 7, 12, MAT.DARK);
-  g.fill(30, 30, 2, 21, 7, 12, MAT.STONE);     // 우측 내벽
-  g.fill(2, 31, 2, 2, 7, 12, MAT.STONE);       // 후면
-  g.fill(4, 29, 2, 21, 12, 12, MAT.STONE);     // 천장
-  g.fill(4, 29, 3, 3, 7, 12, MAT.GLASS);       // 후면 안쪽 유리(빛 통과)
+  g.fill(0, 33, 21, 21, 7, 12, MAT.GLASS);
+  g.fill(0, 1, 2, 21, 7, 12, MAT.STONE);       // 좌측 측벽
+  g.fill(33, 33, 3, 20, 7, 12, MAT.GLASS);     // 우측 측면 통유리
+  g.fill(33, 33, 3, 20, 7, 7, MAT.DARK);
+  g.fill(33, 33, 3, 20, 12, 12, MAT.DARK);
+  for (let z = 5; z <= 19; z += 3) g.fill(33, 33, z, z, 7, 12, MAT.DARK);
+  g.fill(32, 32, 2, 21, 7, 12, MAT.STONE);     // 우측 내벽
+  g.fill(0, 33, 2, 2, 7, 12, MAT.STONE);       // 후면
+  g.fill(2, 31, 2, 21, 12, 12, MAT.STONE);     // 천장
+  g.fill(2, 31, 3, 3, 7, 12, MAT.GLASS);       // 후면 안쪽 유리(빛 통과)
   // 검은 멀리언 리듬
-  for (let x = 5; x <= 29; x += 3) g.fill(x, x, 21, 21, 7, 12, MAT.DARK);
-  g.fill(2, 31, 21, 21, 7, 7, MAT.DARK);       // 하단 프레임
-  g.fill(2, 31, 21, 21, 12, 12, MAT.DARK);     // 상단 프레임
+  for (let x = 3; x <= 30; x += 3) g.fill(x, x, 21, 21, 7, 12, MAT.DARK);
+  g.fill(0, 33, 21, 21, 7, 7, MAT.DARK);       // 하단 프레임
+  g.fill(0, 33, 21, 21, 12, 12, MAT.DARK);     // 상단 프레임
   // 2층 오피스 가구
   for (let i = 0; i < 6; i++) {
     g.fill(4 + i * 4, 6 + i * 4, 8, 10, 7, 7, MAT.WHITE);
@@ -90,28 +93,30 @@ export function buildGrid() {
 
   // ── [봉지 3] 3층 + 지붕 ─────────────────────────────
   // 3층 슬래브 = 2층 지붕. 좌측은 그대로 열린 테라스가 된다
-  g.fill(0, 32, 1, 22, 13, 13, MAT.WHITE);
+  // 사진에서 이 슬래브는 3층 상자·지붕보다 반 칸쯤 더 나간다 (슬래브 36 / 상자·지붕 35)
+  g.fill(-2, 36, 1, 22, 13, 13, MAT.WHITE);
   // 3층 볼륨은 우측으로 물러나 앉는다 (사진의 가장 큰 특징)
-  g.shell(13, 31, 4, 21, 14, 19, MAT.GLASS);
+  g.shell(13, 35, 4, 21, 14, 19, MAT.GLASS);
   g.fill(13, 15, 4, 21, 14, 19, MAT.STONE);    // 좌측 측벽
-  g.fill(31, 31, 5, 20, 14, 18, MAT.GLASS);    // 우측 측면 유리 띠
-  g.fill(31, 31, 5, 20, 14, 14, MAT.DARK);
-  g.fill(31, 31, 5, 20, 19, 19, MAT.STONE);
-  g.fill(30, 30, 4, 21, 14, 19, MAT.STONE);
-  g.fill(13, 31, 4, 4, 14, 19, MAT.STONE);     // 후면
-  for (let x = 21; x <= 29; x += 3) g.fill(x, x, 21, 21, 14, 19, MAT.DARK);
-  g.fill(13, 31, 21, 21, 14, 14, MAT.DARK);
+  g.fill(35, 35, 5, 20, 14, 18, MAT.GLASS);    // 우측 측면 유리 띠
+  g.fill(35, 35, 5, 20, 14, 14, MAT.DARK);
+  g.fill(35, 35, 5, 20, 19, 19, MAT.STONE);
+  g.fill(34, 34, 4, 21, 14, 19, MAT.STONE);
+  g.fill(13, 35, 4, 4, 14, 19, MAT.STONE);     // 후면
+  for (let x = 21; x <= 32; x += 3) g.fill(x, x, 21, 21, 14, 19, MAT.DARK);
+  g.fill(13, 35, 21, 21, 14, 14, MAT.DARK);
   // 3층 라운지 가구
   for (let i = 0; i < 4; i++) g.fill(18 + i * 3, 19 + i * 3, 8, 10, 14, 14, MAT.WOOD);
 
   // 좌측 테라스: 투명 난간 (모델의 클리어 브릭)
-  g.fill(1, 12, 21, 21, 14, 15, MAT.GLASS);
-  g.fill(1, 1, 4, 21, 14, 15, MAT.GLASS);
-  g.fill(1, 12, 4, 4, 14, 15, MAT.GLASS);
-  g.fill(1, 12, 4, 21, 13, 13, MAT.WHITE);     // 테라스 바닥
+  g.fill(-1, 12, 21, 21, 14, 15, MAT.GLASS);
+  g.fill(-1, -1, 4, 21, 14, 15, MAT.GLASS);
+  g.fill(-1, 12, 4, 4, 14, 15, MAT.GLASS);
+  g.fill(-1, 12, 4, 21, 13, 13, MAT.WHITE);    // 테라스 바닥
 
-  // 지붕 — 앞·좌로 크게 내밀어 깊은 그늘 (사진의 시그니처)
-  g.fill(11, 34, 2, 24, 20, 20, MAT.WHITE);
+  // 지붕 — 앞·좌로 크게 내밀어 깊은 그늘 (사진의 시그니처).
+  // 폭은 사진과 같았는데 한 칸 왼쪽에 서 있었다 → 12..35
+  g.fill(12, 35, 2, 24, 20, 20, MAT.WHITE);
   g.fill(22, 26, 8, 12, 21, 21, MAT.DARK);     // 옥상 설비
 
   // 우드 타워가 지붕을 뚫고 살짝 올라온다
@@ -445,7 +450,7 @@ export function createBuilding(envMap) {
   };
   for (let i = 0; i < 14; i++) put(4.5 + i * 0.9, 3.2, 14 + (i % 3) * 2.5, 17);   // 1F (유리 가까이)
   for (let i = 0; i < 22; i++) put(3.5 + i * 1.3, 9.6, 15 + (i % 4) * 2.2, 19);   // 2F
-  for (let i = 0; i < 16; i++) put(14 + i * 1.15, 16.4, 14 + (i % 4) * 2.2, 17);  // 3F
+  for (let i = 0; i < 19; i++) put(14 + i * 1.15, 16.4, 14 + (i % 4) * 2.2, 17);  // 3F
   // 지붕·슬래브 아래 웜 LED 스트립이 우드 타워를 씻어 내린다 (모델의 시그니처)
   for (let i = 0; i < 5; i++) put(16 + i * 0.8, 19.4, 21.4, 9);
   for (let i = 0; i < 5; i++) put(16 + i * 0.8, 12.4, 21.4, 9);
