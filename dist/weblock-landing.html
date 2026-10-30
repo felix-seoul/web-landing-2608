@@ -308,12 +308,26 @@ h2 {
    좌우 분할(main2.js LANE) 이후 건물은 카피 반대편으로 밀려나는데, 패널은
    '카피 반대편 하단' 에 절대배치돼 있어 정확히 건물 밑동을 덮었다.
    카피와 한 칸에 쌓으면 화면 높이와 상관없이 카피와도 겹치지 않는다
-   (절대배치로 옮기면 낮은 노트북에서 카피 스탯과 부딪힌다). */
-@media (min-width: 821px) and (min-height: 521px) {
-  #ch4 .pin, #ch5 .pin, #ch6 .pin { flex-direction: column; justify-content: center; align-items: flex-start; }
+   (절대배치로 옮기면 낮은 노트북에서 카피 스탯과 부딪힌다).
+   .pin 은 fixed 라 넘친 부분은 스크롤로도 볼 수 없다 — 쌓은 높이(가장 큰 #ch5 ≈ 580px)가
+   헤더 아래 남는 높이에 들어갈 때만 쌓는다. 600~699px 은 간격을 줄인 압축판,
+   그보다 낮으면 위의 절대배치 폴백으로 돌아간다. */
+@media (min-width: 821px) and (min-height: 600px) {
+  /* 헤더(≈80px) 아래 남은 칸의 가운데에 세운다 */
+  #ch4 .pin, #ch5 .pin, #ch6 .pin {
+    flex-direction: column; justify-content: center; align-items: flex-start;
+    padding-top: 84px; padding-bottom: 20px;
+  }
   #ch5 .pin { align-items: flex-end; }
   #ch4 .wallet, #ch5 .growth-panel, #ch6 .earn-panel { position: static; margin-top: 30px; }
   #ch5 .growth-panel { margin-right: clamp(0px, 3.4vw, 58px); }   /* 우측 카피와 오른쪽 끝을 맞춘다 */
+}
+@media (min-width: 821px) and (min-height: 600px) and (max-height: 699px) {
+  #ch4 .eyebrow, #ch5 .eyebrow, #ch6 .eyebrow { margin-bottom: 12px; }
+  #ch4 .body, #ch5 .body, #ch6 .body { margin-top: 12px; }
+  #ch4 .stats, #ch5 .stats { margin-top: 18px; }
+  #ch6 .badges { margin-top: 16px; }
+  #ch4 .wallet, #ch5 .growth-panel, #ch6 .earn-panel { margin-top: 16px; padding: 14px 18px; }
 }
 
 .wallet-head, .panel-head {
