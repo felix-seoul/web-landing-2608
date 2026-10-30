@@ -287,8 +287,21 @@ h2 {
   background: linear-gradient(160deg, rgba(30, 23, 14, 0.74), rgba(13, 10, 8, 0.86));
   border: 1px solid rgba(232, 184, 107, 0.3);
 }
-/* 좌측 카피 챕터에서는 패널을 우측에, 우측 카피 챕터에서는 좌측에 둔다 */
+/* 좌측 카피 챕터에서는 패널을 우측에, 우측 카피 챕터에서는 좌측에 둔다
+   (아래 데스크톱 규칙이 덮어쓴다 — 이 배치는 눕힌 폰처럼 세로가 짧은 화면의 폴백이다) */
 #ch5 .growth-panel { right: auto; left: clamp(22px, 6vw, 104px); }
+
+/* 데스크톱: 패널을 카피와 같은 레인, 카피 바로 아래에 흐름으로 쌓는다.
+   좌우 분할(main2.js LANE) 이후 건물은 카피 반대편으로 밀려나는데, 패널은
+   '카피 반대편 하단' 에 절대배치돼 있어 정확히 건물 밑동을 덮었다.
+   카피와 한 칸에 쌓으면 화면 높이와 상관없이 카피와도 겹치지 않는다
+   (절대배치로 옮기면 낮은 노트북에서 카피 스탯과 부딪힌다). */
+@media (min-width: 821px) and (min-height: 521px) {
+  #ch4 .pin, #ch5 .pin, #ch6 .pin { flex-direction: column; justify-content: center; align-items: flex-start; }
+  #ch5 .pin { align-items: flex-end; }
+  #ch4 .wallet, #ch5 .growth-panel, #ch6 .earn-panel { position: static; margin-top: 30px; }
+  #ch5 .growth-panel { margin-right: clamp(0px, 3.4vw, 58px); }   /* 우측 카피와 오른쪽 끝을 맞춘다 */
+}
 
 .wallet-head, .panel-head {
   display: flex; align-items: center; gap: 9px;
