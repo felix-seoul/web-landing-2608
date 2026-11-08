@@ -51,9 +51,15 @@
 
 <!-- 서막: 해당 부동산 실사. assets/hero.jpg 를 넣으면 자동으로 사용된다 (없으면 바로 브릭 씬) -->
 <div class="hero-photo" id="heroPhoto" aria-hidden="true">
-  <div class="hero-photo-img" id="heroPhotoImg"></div>
-  <div class="hero-photo-scrim"></div>
-  <div class="hero-scan"></div>
+  <!-- clip 상자의 아래 끝이 치환 경계선이다. 상자를 transform 으로 올리고 inner 를 같은 양만큼 되돌려
+       사진은 제자리에 둔 채 경계만 움직인다 — 전부 합성기(compositor)에서 끝나 매 프레임 다시 그리지 않는다 -->
+  <div class="hero-photo-clip" id="heroPhotoClip">
+    <div class="hero-photo-inner" id="heroPhotoInner">
+      <div class="hero-photo-img" id="heroPhotoImg"></div>
+      <div class="hero-photo-scrim"></div>
+    </div>
+  </div>
+  <div class="hero-scan" id="heroScan"></div>
 </div>
 
 

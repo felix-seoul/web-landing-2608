@@ -239,13 +239,30 @@ function scrollToT() {
   return Math.min(i + warpLocal(sat((y - secTop[i]) / secLen[i]), i), 7.9999);
 }
 // rawT = 워핑까지만 거친 '실제 스크롤 위치'. T 는 여기에 러프와 넛지가 더해진 연출값이다.
-let targetT = 0, T = 0, rawT = 0;
+let targetT = 0, T = 0, rawT = 0, vT = 0;
 window.__seek = (t) => {
   t = clamp(t, 0, 7.999);
   const i = clamp(Math.floor(t), 0, 7);
   scrollTo(0, secTop[i] + unwarpLocal(t - i, i) * secLen[i]);
   targetT = T = rawT = t;   // 프레임을 기다리지 않아도 __info() 가 맞도록 같이 세운다
+  vT = 0;
 };
+
+// ── 러프: 2차 임계감쇠 스프링 ──────────────────────────────────
+// 1차 지수 러프(T += (target−T)·k)는 휠 한 칸마다 속도가 0 에서 순간적으로 튀었다가
+// 잦아든다 — 카메라가 '턱, 턱' 끊어 출발하는 느낌이 거기서 온다.
+// 임계감쇠 스프링은 속도까지 연속이라 출발이 미끄러지듯 붙고, 오버슈트는 없다.
+// 정상 상태 지연은 2/ω: ω 10 → 200ms(휠·마우스), 22 → 91ms(터치) 로 예전 시정수와 같다.
+// 손가락이 닿아 있는 동안 빠른 쪽을 쓰는 이유는 touching 쪽 주석 참고.
+// 닫힌 해를 적분하므로 dt 가 커도(탭 복귀 등) 발산하지 않는다.
+function springT(dt) {
+  const w = touching ? 22 : 10;
+  const d0 = T - targetT;
+  const e = Math.exp(-w * dt);
+  const c = vT + w * d0;
+  T = targetT + (d0 + c * dt) * e;
+  vT = (vT - w * c * dt) * e;
+}
 
 // ── 비트 스냅 ──────────────────────────────────────────────────
 // 손을 떼고 관성까지 잦아들었을 때, 디텐트 안쪽에 있으면 중심으로 살짝 앉힌다.
@@ -307,8 +324,11 @@ document.querySelectorAll('[data-c]').forEach((el) => (counters[el.dataset.c] = 
 // 서막 실사 사진 — assets/hero.jpg 가 있으면 사용, 없으면 바로 브릭 씬으로 시작
 const PHOTO_SRC = 'assets/hero.jpg';
 const heroPhoto = document.getElementById('heroPhoto');
+const heroPhotoClip = document.getElementById('heroPhotoClip');
+const heroPhotoInner = document.getElementById('heroPhotoInner');
 const heroPhotoImg = document.getElementById('heroPhotoImg');
-let hasPhoto = false, photoW = 0, photoH = 0;
+const heroScan = document.getElementById('heroScan');
+let hasPhoto = false, photoW = 0, photoH = 0, softCss = -1;
 // 사진 안에서 건물 본체가 차지하는 사각형(원본 픽셀 기준).
 // 좌: 본체 좌측면 / 우: 우측 캔틸레버 끝 / 상: 지붕 앞날 / 하: 건물이 땅에 닿는 선.
 // (좌측 별동과 주차장은 뺀다 — 3D 매싱의 실루엣과 같은 범위여야 한다)
@@ -319,6 +339,9 @@ if (heroPhoto) {
     hasPhoto = true;
     photoW = probe.naturalWidth || PHOTO_MASS.W;
     photoH = probe.naturalHeight || PHOTO_MASS.H;
+    // 원본 픽셀 크기의 상자 하나로 두고 transform 만 움직인다 (fitHeroPhoto 참고)
+    heroPhotoImg.style.width = `${photoW}px`;
+    heroPhotoImg.style.height = `${photoH}px`;
     heroPhotoImg.style.backgroundImage = `url("${PHOTO_SRC}")`;
     heroPhoto.classList.add('on');
   };
@@ -357,8 +380,9 @@ function fitHeroPhoto() {
   // 가로는 건물 중심, 세로는 '땅에 닿는 선'에 앵커 (스윕이 아래에서 위로 올라오므로)
   const bx = (r.x0 + r.x1) / 2 - (pm.x0 + pm.x1) / 2 * (photoW / pm.W) * s;
   const by = r.y1 - pm.y1 * (photoH / pm.H) * s;
-  heroPhotoImg.style.backgroundSize = `${dw.toFixed(1)}px ${dh.toFixed(1)}px`;
-  heroPhotoImg.style.backgroundPosition = `${bx.toFixed(1)}px ${by.toFixed(1)}px`;
+  // background-size/position 이 아니라 transform — 전자는 매 프레임 사진 레이어를 다시 래스터한다.
+  // 상자가 원본 픽셀 크기(photoW×photoH)이므로 translate(bx,by)·scale(s) 가 같은 사각형이 된다.
+  heroPhotoImg.style.transform = `translate3d(${bx.toFixed(1)}px,${by.toFixed(1)}px,0) scale(${s.toFixed(5)})`;
 }
 // 헤드라인을 줄 단위로 감싸 마스크 안에서 차례로 올라오게 한다
 const headLines = copies.map((el) => {
@@ -689,8 +713,16 @@ function director(t, dt) {
       : sweepE < 0.9 ? seg(bot, top, (sweepE - 0.14) / 0.76)
         : seg(top, -soft, (sweepE - 0.9) / 0.1);
     if (photoLive) {
-      heroPhoto.style.setProperty('--edge', `${(H - edgeY).toFixed(1)}px`);
-      heroPhoto.style.setProperty('--soft', `${soft.toFixed(1)}px`);
+      // 마스크 두께는 8px 단위로만 바꾼다 — 바꾸는 순간 마스크가 다시 그려지므로
+      const sq = Math.round(soft / 8) * 8;
+      if (sq !== softCss) { softCss = sq; heroPhoto.style.setProperty('--soft', `${sq}px`); }
+      // 경계 상자(화면 두 배 높이)의 아래 끝을 '경계선 + 마스크 두께' 에 둔다: 사진은 경계선 위에서
+      // 불투명하고 그 아래 sq 만큼에서 빠진다(밴드의 아랫자락 뒤). inner 는 그만큼 되돌려 화면에 고정.
+      // 밴드는 bottom:0 기준이라 '경계선 + soft·1.9' 로 내린다. 전부 transform 이다.
+      const ty = edgeY + sq - H;
+      heroPhotoClip.style.transform = `translate3d(0,${ty.toFixed(1)}px,0)`;
+      heroPhotoInner.style.transform = `translate3d(0,${(-ty).toFixed(1)}px,0)`;
+      heroScan.style.transform = `translate3d(0,${(edgeY - H + soft * 1.9).toFixed(1)}px,0)`;
     }
     // 브릭 위를 훑는 보라 밴드도 같은 줄에 둔다. 어긋나면 '빛이 지나가며
     // 재질이 바뀐다'가 아니라 '두 장면이 겹쳤다'로 보인다.
@@ -741,11 +773,16 @@ function director(t, dt) {
 
 // ---------------------------------------------------------------- 적응형 품질
 // 저사양 기기에서 프레임이 무너지면 단계적으로 무게를 덜어낸다.
-// 2 = 전부 / 1 = 그림자 해상도·픽셀비 축소 / 0 = 그림자 해제
-let tier = 2, slowSec = 0, bloomScale = 1;
+// 3 = 전부 / 2 = 픽셀비 ≤1.5 (레티나 노트북의 첫 단계 — 화질 차이는 거의 없고 픽셀 수는 44% 준다)
+// / 1 = 그림자 해상도·픽셀비 축소 / 0 = 그림자 해제
+let tier = 3, slowSec = 0, bloomScale = 1;
 function applyTier() {
-  if (tier >= 2) {
+  if (tier >= 3) {
     renderer.setPixelRatio(BASE_PR);
+    renderer.shadowMap.enabled = true;
+    bloomScale = 1;
+  } else if (tier === 2) {
+    renderer.setPixelRatio(Math.min(BASE_PR, 1.5));
     renderer.shadowMap.enabled = true;
     bloomScale = 1;
   } else if (tier === 1) {
@@ -773,7 +810,7 @@ function applyTier() {
 //
 // 페이지를 실제로 스크롤하지 않고 타임라인만 잠깐 앞당긴다.
 // scrollY 를 건드리면 관성·스냅과 엉키고 사용자가 되돌리기도 어렵다.
-// 손가락이 닿아 있는 동안은 러프를 짧게(시정수 190ms → 90ms) 잡는다.
+// 손가락이 닿아 있는 동안은 러프(springT)를 빠르게(지연 200ms → 91ms) 잡는다.
 // iOS 관성 위에 우리 러프가 또 얹히면 '손을 안 따라온다'로 읽힌다 —
 // 조작 중엔 바짝 붙고, 손을 떼면 원래의 부드러움으로 돌아간다.
 let touching = false;
@@ -811,19 +848,24 @@ function frame() {
   updateSnap(dt);
   rawT = scrollToT();
   targetT = clamp(rawT + nudgeAmount(t), 0, 7.9999);
-  const k = SNAP || REDUCED ? 1 : 1 - Math.exp(-dt * (touching ? 11 : 5.2));
-  T += (targetT - T) * k;
+  if (SNAP || REDUCED) { T = targetT; vT = 0; } else springT(dt);
   director(t, dt);
   uiUpdate();
   post.composer.render();
   frames++;
-  if (t - lastFpsT > 1) {
-    fps = frames / (t - lastFpsT); frames = 0; lastFpsT = t;
-    // 4초 이후부터 관찰 — 초기 컴파일 구간은 제외한다
-    if (!SNAP && t > 4) {
-      if (fps < 34) slowSec++; else slowSec = Math.max(0, slowSec - 1);
-      if (slowSec >= 3 && tier > 0) { tier--; applyTier(); slowSec = 0; }
+  const el = t - lastFpsT;
+  if (el > 1) {
+    // 탭이 가려졌다 돌아온 틈은 측정이 아니다 — rAF 가 멈춰 있었을 뿐이다
+    if (el < 2.5) {
+      fps = frames / el;
+      // 4초 이후부터 관찰 — 초기 컴파일 구간은 제외한다.
+      // 60Hz 에서 48fps 아래는 이미 '끊긴다'로 보인다. 예전 기준(34)은 그 구간을 그냥 두었다.
+      if (!SNAP && t > 4) {
+        if (fps < 48) slowSec++; else slowSec = Math.max(0, slowSec - 1);
+        if (slowSec >= 3 && tier > 0) { tier--; applyTier(); slowSec = 0; }
+      }
     }
+    frames = 0; lastFpsT = t;
   }
   if (!started) {
     started = true;
@@ -856,7 +898,7 @@ window.__info = () => ({ T: +T.toFixed(3), raw: +rawT.toFixed(3), fps: +fps.toFi
 window.__rawNow = () => scrollToT();      // scrollY 로 바로 계산한 워핑 후 T
 window.__snapBusy = () => !!snap;         // 비트 스냅 진행 중인가
 window.__brickCount = () => building.brickSys.count;
-window.__tier = (n) => { tier = clamp(n, 0, 2); applyTier(); };
+window.__tier = (n) => { tier = clamp(n, 0, 3); applyTier(); };
 window.__probe = () => {
   const r = projectMassFront();
   return {
