@@ -526,27 +526,42 @@ h2 {
 /* ── 서막 실사 레이어 ── */
 /* 캔버스(z0) 위, 카피(z10) 아래. 보라 밴드가 아래에서 위로 훑고 지나가며
    사진이 벗겨지고 그 자리에 브릭이 남는다.
-   --edge(화면 아래에서 잰 경계선 높이)·--soft(경계 두께)는 main2.js 가 써 넣는다.
    경계를 화면 비율이 아니라 '건물이 차지한 구간'에 맞추므로,
-   밴드가 건물을 지나는 데 대부분의 시간을 쓴다 — 그래야 치환이 보인다. */
+   밴드가 건물을 지나는 데 대부분의 시간을 쓴다 — 그래야 치환이 보인다.
+
+   매 프레임 바뀌는 것은 전부 transform/opacity 다 (합성기만 움직인다).
+   예전에는 mask-image 의 경계 위치와 사진의 background-position 을 매 프레임 바꿨는데,
+   그건 전체 화면 크기의 사진 레이어를 프레임마다 다시 래스터하는 일이라
+   모바일에서 첫 화면이 가장 버벅였다. --soft(경계 두께)만 가끔 바뀐다(8px 단위). */
 .hero-photo {
-  position: fixed; inset: 0; z-index: 3;
+  position: fixed; inset: 0; z-index: 3; overflow: hidden;
   pointer-events: none; opacity: 0; visibility: hidden;
-  --edge: 200vh; --soft: 80px; --scan: 0;
+  --soft: 80px; --scan: 0;
 }
 .hero-photo.on { visibility: visible; }
+/* 경계 상자. 화면 두 배 높이로 두고 아래 끝을 translateY 로 '경계선 + --soft' 에 맞춘다.
+   마스크는 상자 자신의 아래 --soft 구간을 빼는 고정 그라디언트 — 상자가 움직여도 다시 그리지 않는다.
+   그래서 사진은 경계선 위에서 불투명하고, 경계선 아래 --soft 만큼에서 부드럽게 빠진다.
+   사진 밖은 검정: 원본 사진의 여백이 완전한 검정이라 이어 붙여도 경계가 보이지 않는다. */
+.hero-photo-clip {
+  position: absolute; left: 0; right: 0; top: -100%; height: 200%;
+  overflow: hidden; background: #000;
+  will-change: transform;
+  -webkit-mask-image: linear-gradient(to top, transparent 0, #000 var(--soft));
+  mask-image: linear-gradient(to top, transparent 0, #000 var(--soft));
+}
+/* 상자 안에서 화면과 같은 자리(상자의 아래 절반). 상자가 올라간 만큼 되돌려 받아 화면에 고정된다. */
+.hero-photo-inner {
+  position: absolute; left: 0; right: 0; top: 50%; height: 50%;
+  will-change: transform;
+}
 /* 사진은 화면을 채우는 게 아니라 3D 건물의 실루엣에 맞춰 앉는다.
-   size/position 은 main2.js 의 fitHeroPhoto() 가 매 프레임 써 넣는다.
-   원본 사진의 여백이 완전한 검정이라 배경색으로 이어 붙여도 경계가 보이지 않는다. */
+   원본 픽셀 크기로 두고 main2.js 의 fitHeroPhoto() 가 매 프레임 translate·scale 을 써 넣는다. */
 .hero-photo-img {
-  position: absolute; inset: 0;
-  background-repeat: no-repeat;
-  background-color: #000;
-  will-change: mask-image;
-  -webkit-mask-image: linear-gradient(to top,
-    transparent 0 calc(var(--edge) - var(--soft)), #000 var(--edge));
-  mask-image: linear-gradient(to top,
-    transparent 0 calc(var(--edge) - var(--soft)), #000 var(--edge));
+  position: absolute; left: 0; top: 0;
+  background-repeat: no-repeat; background-size: 100% 100%;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 /* 사진 위 톤 정리 — 3D 씬의 밤 무드와 이어지도록 */
 .hero-photo-scrim {
@@ -554,16 +569,12 @@ h2 {
   background:
     linear-gradient(to top, rgba(3,5,12,0.92) 0%, rgba(3,5,12,0.45) 34%, rgba(6,4,18,0.18) 66%, rgba(10,6,26,0.34) 100%),
     linear-gradient(120deg, rgba(46,20,110,0.28), rgba(0,0,0,0) 60%);
-  -webkit-mask-image: linear-gradient(to top,
-    transparent 0 calc(var(--edge) - var(--soft)), #000 var(--edge));
-  mask-image: linear-gradient(to top,
-    transparent 0 calc(var(--edge) - var(--soft)), #000 var(--edge));
 }
 .hero-scan {
-  position: absolute; left: -8%; right: -8%;
+  position: absolute; left: -8%; right: -8%; bottom: 0;
   height: calc(var(--soft) * 3.2);
-  bottom: calc(var(--edge) - var(--soft) * 1.9);
   opacity: var(--scan);
+  will-change: transform;
   mix-blend-mode: screen; filter: blur(7px);
   background: linear-gradient(to top,
     rgba(91,22,238,0) 0%, rgba(124,77,255,0.42) 40%,
