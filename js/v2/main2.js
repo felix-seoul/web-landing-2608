@@ -839,6 +839,11 @@ const loader = document.getElementById('loader');
 const loaderBar = document.getElementById('loaderBar');
 if (loaderBar) loaderBar.style.width = '45%';
 let started = false, frames = 0, fps = 60, lastFpsT = 0;
+// 탭이 가려졌다 돌아오면 그 틈은 측정이 아니다 — rAF 가 멈춰 있었을 뿐이다.
+// 돌아온 첫 프레임에서 측정 창을 새로 연다. (간격 길이로 거르면 한 프레임이 2.5초씩
+// 걸리는 진짜 과부하 기기까지 걸러져 품질이 영영 안 내려간다)
+let fpsReset = false;
+addEventListener('visibilitychange', () => { if (!document.hidden) fpsReset = true; });
 const clock = new THREE.Clock();
 
 function frame() {
@@ -852,20 +857,16 @@ function frame() {
   director(t, dt);
   uiUpdate();
   post.composer.render();
+  if (fpsReset) { fpsReset = false; frames = 0; lastFpsT = t; }
   frames++;
-  const el = t - lastFpsT;
-  if (el > 1) {
-    // 탭이 가려졌다 돌아온 틈은 측정이 아니다 — rAF 가 멈춰 있었을 뿐이다
-    if (el < 2.5) {
-      fps = frames / el;
-      // 4초 이후부터 관찰 — 초기 컴파일 구간은 제외한다.
-      // 60Hz 에서 48fps 아래는 이미 '끊긴다'로 보인다. 예전 기준(34)은 그 구간을 그냥 두었다.
-      if (!SNAP && t > 4) {
-        if (fps < 48) slowSec++; else slowSec = Math.max(0, slowSec - 1);
-        if (slowSec >= 3 && tier > 0) { tier--; applyTier(); slowSec = 0; }
-      }
+  if (t - lastFpsT > 1) {
+    fps = frames / (t - lastFpsT); frames = 0; lastFpsT = t;
+    // 4초 이후부터 관찰 — 초기 컴파일 구간은 제외한다.
+    // 60Hz 에서 48fps 아래는 이미 '끊긴다'로 보인다. 예전 기준(34)은 그 구간을 그냥 두었다.
+    if (!SNAP && t > 4) {
+      if (fps < 48) slowSec++; else slowSec = Math.max(0, slowSec - 1);
+      if (slowSec >= 3 && tier > 0) { tier--; applyTier(); slowSec = 0; }
     }
-    frames = 0; lastFpsT = t;
   }
   if (!started) {
     started = true;

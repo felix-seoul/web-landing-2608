@@ -79,7 +79,7 @@ tools/build-single.mjs  단일 HTML 번들 빌더 → dist/weblock-landing.html
 | 챕터별 멈춤 지점 | `main2.js` `BEAT` | 챕터 로컬 l |
 | 데스크톱 좌우 분할 양 | `main2.js` `SPLIT_F` | 화면 폭의 0.15 |
 | 스크롤 러프(스프링 ω) | `main2.js` `springT` `touching ? 22 : 10` | 지연 2/ω = 91ms(터치) / 200ms |
-| 적응형 품질 | `main2.js` `fps < 48` 3초 연속이면 `tier--` | 3 전부 → 2 픽셀비 ≤1.5 → 1 그림자 1024·픽셀비 1.15 → 0 그림자 해제 |
+| 적응형 품질 | `main2.js` `fps < 48` 3초 연속이면 `tier--` (탭 복귀 시 `visibilitychange` 로 측정 창 리셋) | 3 전부 → 2 픽셀비 ≤1.5 → 1 그림자 1024·픽셀비 1.15 → 0 그림자 해제 |
 | 조립 비행 브릭 발광 | `bricks.js` `vFly = (1.0 - e) * 2.4` | ×2.4 |
 | 무드(하늘·노출·라이트) | `main2.js` `MOODS` | 챕터 경계별 |
 | 카메라 | `main2.js` `K_AZ` `K_DIST` `K_H` `K_TY` `K_FOV` | T 별 키프레임 |
