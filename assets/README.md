@@ -14,7 +14,8 @@
 사진은 화면에 고정돼 있지 않다. `js/v2/main2.js` 의 `fitHeroPhoto()` 가 **매 프레임**
 3D 건물의 정면 실루엣(`building.mass`)을 화면에 투영하고, 사진 속 건물 사각형을 그 위에 맞춰 앉힌다.
 그래서 카메라·화면비가 바뀌어도 사진과 레고가 같은 자리, 같은 크기로 선다.
-`css/style.css` 에서 `background-position`/`background-size` 를 건드리면 매 프레임 덮어써지거나 정합이 깨진다.
+사진 상자는 원본 픽셀 크기이고 `transform: translate·scale` 로 앉힌다 — `css/style.css` 에서 위치·크기를 건드리면 매 프레임 덮어써지거나 정합이 깨진다.
+(`background-position` 이 아니라 transform 인 이유: 전자는 매 프레임 사진 레이어를 다시 그려 모바일 첫 화면이 버벅인다.)
 
 ### 사진을 바꿀 때
 
